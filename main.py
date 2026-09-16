@@ -1,82 +1,91 @@
 import sys
+from functools import partial
 
 from PySide6.QtWidgets import QMainWindow, QApplication, QMessageBox
-from window import Ui_MainWindow
+from main_window import Ui_MainWindow
+
 
 class Main(QMainWindow):
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.pushButton_0.clicked.connect(lambda:self.add_num('0'))
-        self.ui.pushButton_1.clicked.connect(lambda:self.add_num('1'))
-        self.ui.pushButton_2.clicked.connect(lambda:self.add_num('2'))
-        self.ui.pushButton_3.clicked.connect(lambda:self.add_num('3'))
-        self.ui.pushButton_4.clicked.connect(lambda:self.add_num('4'))
-        self.ui.pushButton_5.clicked.connect(lambda:self.add_num('5'))
-        self.ui.pushButton_6.clicked.connect(lambda:self.add_num('6'))
-        self.ui.pushButton_7.clicked.connect(lambda:self.add_num('7'))
-        self.ui.pushButton_8.clicked.connect(lambda:self.add_num('8'))
-        self.ui.pushButton_9.clicked.connect(lambda:self.add_num('9'))
-        self.ui.pushButton_plus.clicked.connect(lambda:self.gathering())
-        self.ui.pushButton_substract.clicked.connect(lambda:self.subtracting())
-        self.ui.pushButton_multiply.clicked.connect(lambda:self.Multiplying())
-        self.ui.pushButton_divide.clicked.connect(lambda:self.dividing())
-        self.ui.pushButton_equal.clicked.connect(lambda:self.equaling())
-        self.ui.pushButton_clear.clicked.connect(lambda:self.clear())
 
-        self.total = 0            # مجموع عدد 
+        for i in range(10):
+            button = getattr(self.ui, f"pushButton_{i}")
+            button.clicked.connect(partial(self.add_num, str(i)))
+
+        operators = {
+            "plus": "+",
+            "substract": "-",
+            "multiply": "×",
+            "divide": "÷"
+        }
+        for name, symbol in operators.items():
+            button = getattr(self.ui, f"pushButton_{name}")
+            button.clicked.connect(partial(self.set_operator, symbol))
+
+        self.ui.pushButton_equal.clicked.connect(self.equaling)
+        self.ui.pushButton_clear.clicked.connect(self.clear)
+
+        self.total = 0
         self.operator = ''
         self.text_line = ''
 
-    def add_num(self,text:str = None):             
-        text_line = self.ui.lineEdit_result.text()
-        self.ui.lineEdit_result.setText(text_line + text)
+    def add_num(self, text):
+        current = self.ui.lineEdit_result.text()
+        self.ui.lineEdit_result.setText(current + text)
 
-    def gathering(self):                    #جمع کردن
-        self.text_line  = self.ui.lineEdit_result.text()
-        self.operator = '+'
-        self.ui.lineEdit_result.setText(None)
-        
-
-    def subtracting(self):                      #تفریق کردن
-        self.text_line  = self.ui.lineEdit_result.text()
-        self.operator = '-'
-        self.ui.lineEdit_result.setText(None)
-                
-        
-
-    def Multiplying(self):                               #ضرب کردن
+    def set_operator(self, symbol):
         self.text_line = self.ui.lineEdit_result.text()
-        self.operator = '×'
-        self.ui.lineEdit_result.setText(None)
-                
+        self.operator = symbol
+        self.ui.lineEdit_result.setText("")
 
-    def dividing(self):                          #تقسیم کردن
-        self.text_line = self.ui.lineEdit_result.text()
-        self.operator = '÷'
-        self.ui.lineEdit_result.setText(None)        
+    def equaling(self):
+        second_text = self.ui.lineEdit_result.text()
+        if second_text == "":
+            QMessageBox.warning(self, "خطا", "لطفاً عدد دوم را وارد کنید!")
+            return
 
-    def equaling(self):                           # نشان دادن مجموع
-        if self.operator == '+':
-            text = int(self.text_line) + int(self.ui.lineEdit_result.text())
-            self.ui.lineEdit_result.setText(str(text))
+        if self.operator == "":
+            QMessageBox.warning(self, "خطا", "لطفاً یک عملگر انتخاب کنید!")
+            return
 
-        elif self.operator == '-':
-            text = int(self.text_line) - int(self.ui.lineEdit_result.text())
-            self.ui.lineEdit_result.setText(str(text))
+        try:
+            first = float(self.text_line)
+            second = float(second_text)
 
-        elif self.operator == '×':
-            text = int(self.text_line) * int(self.ui.lineEdit_result.text())
-            self.ui.lineEdit_result.setText(str(text))
+            if self.operator == '+':
+                result = first + second
+            elif self.operator == '-':
+                result = first - second
+            elif self.operator == '×':
+                result = first * second
+            elif self.operator == '÷':
+                if second == 0:
+                    QMessageBox.warning(self, "خطا", "تقسیم بر صفر ممکن نیست!")
+                    return
+                result = first / second
+            else:
+                return
 
-        elif self.operator == '÷':
-            text = int(self.text_line) / int(self.ui.lineEdit_result.text())
-            self.ui.lineEdit_result.setText(str(text))
+            if result == int(result):
+                self.ui.lineEdit_result.setText(str(int(result)))
+            else:
+                self.ui.lineEdit_result.setText(str(result))
 
-    def clear(self):                              #پاک کردن
-        self.ui.lineEdit_result.setText(None)
-        
+            self.operator = ''
+            self.text_line = ''
+
+        except ValueError:
+            QMessageBox.warning(self, "خطا", "لطفاً فقط عدد وارد کنید!")
+            self.clear()
+
+    def clear(self):
+        self.ui.lineEdit_result.setText("")
+        self.operator = ''
+        self.text_line = ''
+
 
 app = QApplication(sys.argv)
 main = Main()
